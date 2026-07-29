@@ -6,6 +6,8 @@ import { connectDB, disconnectDB } from "./config/db.js";
 import movieRoutes from "./routes/movieRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import watchlistRoutes from "./routes/watchlistRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js";
+
 
 config();
 connectDB();
@@ -20,6 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/movies", movieRoutes);
 app.use("/auth", authRoutes);
 app.use("/watchlist", watchlistRoutes);
+app.use("/",  taskRoutes);
+
 
 const server = app.listen(process.env.PORT || 5001, "0.0.0.0", () => {
   console.log(`Server running on PORT ${process.env.PORT}`);
