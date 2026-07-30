@@ -50,12 +50,12 @@ router.get('/tasks', async (req, res) => {
 });
 
 router.get('/tasks/:id', async (req, res) => {
-  const { id } = req.params; // This is a string: "cms7i1ejx0002i8uwn8pflav"
+  const { id } = req.params;
 
   try {
     const task = await prisma.task.findUnique({
       where: {
-        id: id // Pass the string directly, do not wrap it in an object
+        id: id
       }
     });
 
@@ -74,28 +74,87 @@ router.get('/tasks/:id', async (req, res) => {
 
 
 
-router.post('/tasks', (req, res) => {
+router.post('/tasks', async (req, res) => {
+  const {
+    title,
+    status,
+    priority,
+    category,
+    description,
+    dueDate } = req.body;
+
+  try {
+    const task = await prisma.task.create({
+      data: {
+        title,
+        status,
+        priority,
+        category,
+        description,
+        dueDate
+      }
+    });
+    res.json({
+      message: 'Task created successfully',
+      task: task
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to create task', error: error.message });
+  }
 
 });
 
 
+router.put('/tasks/:id', async (req, res) => {
+ const { id } = req.params;
 
+  try {
+    const task = await prisma.task.findUnique({
+      where: {
+        id: id
+      }
+    });
 
-
-
-router.put('/tasks/:id', (req, res) => {
-  res.json({ message: 'Hello World!' });
-});
-
-
-router.delete('/tasks/:id', (req, res) => {
-
-  prisma.tasks.delete({
-    where: {
-      id: req.params.id
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
     }
-  })
-  res.json({ message: 'Hello World!' });
+
+    task
+
+    return res.json({
+      message: 'Task fetched successfully',
+      task: task
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to fetch task', error: error.message });
+  }
 });
+
+
+router.delete('/tasks/:id', async (req, res) => {
+  const { id } = req.params;
+
+
+
+  try {
+    const task = await prisma.task.findUnique({
+      where: {
+        id: id
+      }
+    }); 
+    if (!task) {
+      return res.status(404).json({ error: "task Not Found" });
+    }
+    await prisma.task.delete({
+      where: {
+        id: req.params.id
+      }
+    })
+    return res.json({ message: "task deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 
 export default router;
