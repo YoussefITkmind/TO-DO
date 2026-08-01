@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/tasks', async (req, res) => {
+router.get('/tasks?query', async (req, res) => {
   try {
     const tasks = await prisma.task.findMany();
     res.json({
@@ -106,27 +106,31 @@ router.post('/tasks', async (req, res) => {
 
 
 router.put('/tasks/:id', async (req, res) => {
- const { id } = req.params;
+  const { id } = req.params;
+  const { title, status, priority, category, description, dueDate } = req.body;
+
 
   try {
-    const task = await prisma.task.findUnique({
-      where: {
-        id: id
+    const updatedTask = await prisma.task.update({
+      where: { id },
+      data: {
+        title,
+        status,
+        priority,
+        category,
+        description,
+        dueDate: dueDate ? new Date(dueDate) : undefined 
       }
     });
 
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    task
-
     return res.json({
-      message: 'Task fetched successfully',
-      task: task
+      message: 'Task Updated successfully',
+      task: updatedTask
     });
+
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch task', error: error.message });
+  
+    return res.status(500).json({ message: 'Failed to update task', error: error.message });
   }
 });
 
