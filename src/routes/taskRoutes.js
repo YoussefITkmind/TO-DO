@@ -2,22 +2,49 @@ import express from 'express';
 import { prisma } from "../config/db.js"
 const router = express.Router();
 
+const Status = {
+  pending: "pending",
+  completed: "completed"
+}
+
+const Priority = {
+  low: "low",
+  medium: "medium",
+  high: "high"
+}
+
+const Category = {
+  health: "health",
+  work: "work",
+  finance: "finance",
+  shopping: "shopping",
+  personal: "personal",
+  other: "other"
+}
+
+const SortBy = {
+  newestFirst: "nf",
+  oldestFirst: "of",
+  byDueDate: "dd",
+  byPriority: "bp"
+}
+
 router.get('/', async (req, res) => {
   try {
     const tasks = await prisma.task.findMany();
     const tasksCount = tasks.length;
     const completed = await prisma.task.findMany(
       {
-        where: { status: "completed" }
+        where: { status: Status.completed }
       })
     const pendingTasks = await prisma.task.findMany(
       {
-        where: { status: "pending" }
+        where: { status: Status.pending }
       })
 
     const highTasks = await prisma.task.findMany(
       {
-        where: { priority: "high" }
+        where: { priority: Priority.high }
       })
     const pendingCount = pendingTasks.length
     const highCount = highTasks.length
@@ -37,9 +64,26 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/tasks?query', async (req, res) => {
+router.get('/tasks', async (req, res) => {
+  const { search , status , priority , category , sortBy } = req.query;
+
   try {
     const tasks = await prisma.task.findMany();
+    if (search) {
+      tasks = tasks.filter(task => task.title.includes(search));
+    }
+    if (status) {
+      tasks = tasks.filter(task => task.status === Status[status]);
+    }
+    if (priority) {
+      tasks = tasks.filter(task => task.priority === Priority[priority]);
+    }
+    if (category) {
+      tasks = tasks.filter(task => task.category === Category[category]);
+    }
+    if (sortBy && SortBy[sortBy]) {
+      tasks = tasks.sort((a, b) => a[SortBy[sortBy]] - b[SortBy[sortBy]]);
+    }
     res.json({
       message: 'Tasks fetched successfully',
       tasks: tasks
