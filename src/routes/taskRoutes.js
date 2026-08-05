@@ -23,36 +23,36 @@ const Category = {
 }
 
 const SortBy = {
-  newestFirst: "nf",
-  oldestFirst: "of",
-  byDueDate: "dd",
-  byPriority: "bp"
+  newestFirst: "newest",
+  oldestFirst: "oldest",
+  byDueDate: "dueDate",
+  byPriority: "priority"
 }
 
 router.get('/', async (req, res) => {
   try {
-    const tasks = await prisma.task.findMany();
-    const tasksCount = tasks.length;
-    const completed = await prisma.task.findMany(
-      {
-        where: { status: Status.completed }
-      })
-    const pendingTasks = await prisma.task.findMany(
-      {
-        where: { status: Status.pending }
-      })
+    const tasksCount = await prisma.task.count();
 
-    const highTasks = await prisma.task.findMany(
-      {
-        where: { priority: Priority.high }
-      })
-    const pendingCount = pendingTasks.length
-    const highCount = highTasks.length
+    const completedTasks = await prisma.task.count({
+      where: {
+        status: "completed"
+      }
+    });
 
-    const completedTasks = completed.length
-    console.log(tasksCount)
+    const pendingCount = await prisma.task.count({
+      where: {
+        status: "pending"
+      }
+    });
+
+    const highCount = await prisma.task.count({
+      where: {
+        priority: "high"
+      }
+    });
 
     res.json({
+      success: true,
       message: 'Dashboard fetched successfully',
       tasksCount: tasksCount,
       completed: completedTasks,
@@ -60,36 +60,57 @@ router.get('/', async (req, res) => {
       highTasks: highCount
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch tasks', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch tasks', error: error.message });
   }
 });
 
 router.get('/tasks', async (req, res) => {
-  const { search , status , priority , category , sortBy } = req.query;
-
+  const { search, status, priority, category, sortBy } = req.query;
+  console.log("Search Query:", req.query);
   try {
     const tasks = await prisma.task.findMany();
+
+    let filteredTasks = tasks;
     if (search) {
-      tasks = tasks.filter(task => task.title.includes(search));
+      filteredTasks = filteredTasks.filter(task => task.title.toLowerCase().includes(search.toLowerCase())
+        || task.description.toLowerCase().includes(search.toLowerCase()));
     }
+
     if (status) {
-      tasks = tasks.filter(task => task.status === Status[status]);
+      filteredTasks = filteredTasks.filter(task => task.status === Status[status]);
     }
     if (priority) {
-      tasks = tasks.filter(task => task.priority === Priority[priority]);
+      filteredTasks = filteredTasks.filter(task => task.priority === Priority[priority]);
     }
     if (category) {
-      tasks = tasks.filter(task => task.category === Category[category]);
+      filteredTasks = filteredTasks.filter(task => task.category === Category[category]);
     }
-    if (sortBy && SortBy[sortBy]) {
-      tasks = tasks.sort((a, b) => a[SortBy[sortBy]] - b[SortBy[sortBy]]);
+    if (sortBy) {
+      switch (sortBy) {
+        case SortBy.newestFirst:
+          filteredTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          break;
+        case SortBy.oldestFirst:
+          filteredTasks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          break;
+        case SortBy.byDueDate:
+          filteredTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+          break;
+        case SortBy.byPriority:
+          filteredTasks.sort((a, b) => {
+            const priorityOrder = [Priority.high, Priority.medium, Priority.low];
+            return priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority);
+          });
+          break;
+      }
     }
     res.json({
+      success: true,
       message: 'Tasks fetched successfully',
-      tasks: tasks
+      tasks: filteredTasks
     })
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch tasks', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch tasks', error: error.message });
   }
 });
 
@@ -104,15 +125,16 @@ router.get('/tasks/:id', async (req, res) => {
     });
 
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
     return res.json({
+      success: true,
       message: 'Task fetched successfully',
       task: task
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch task', error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch task', error: error.message });
   }
 });
 
@@ -128,6 +150,22 @@ router.post('/tasks', async (req, res) => {
     dueDate } = req.body;
 
   try {
+    if (!title || !dueDate) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    if (status && !Object.values(Status).includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
+    }
+
+    if (priority && !Object.values(Priority).includes(priority)) {
+      return res.status(400).json({ success: false, message: 'Invalid priority value' });
+    }
+
+    if (category && !Object.values(Category).includes(category)) {
+      return res.status(400).json({ success: false, message: 'Invalid category value' });
+    }
+
     const task = await prisma.task.create({
       data: {
         title,
@@ -135,15 +173,16 @@ router.post('/tasks', async (req, res) => {
         priority,
         category,
         description,
-        dueDate
+        dueDate: dueDate ? new Date(dueDate) : undefined
       }
     });
-    res.json({
+    res.status(201).json({
+      success: true,
       message: 'Task created successfully',
       task: task
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create task', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to create task', error: error.message });
   }
 
 });
@@ -163,18 +202,19 @@ router.put('/tasks/:id', async (req, res) => {
         priority,
         category,
         description,
-        dueDate: dueDate ? new Date(dueDate) : undefined 
+        dueDate: dueDate ? new Date(dueDate) : undefined
       }
     });
 
     return res.json({
+      success: true,
       message: 'Task Updated successfully',
       task: updatedTask
     });
 
   } catch (error) {
-  
-    return res.status(500).json({ message: 'Failed to update task', error: error.message });
+
+    return res.status(500).json({ success: false, message: 'Failed to update task', error: error.message });
   }
 });
 
@@ -189,18 +229,18 @@ router.delete('/tasks/:id', async (req, res) => {
       where: {
         id: id
       }
-    }); 
+    });
     if (!task) {
-      return res.status(404).json({ error: "task Not Found" });
+      return res.status(404).json({ success: false, message: "task Not Found" });
     }
     await prisma.task.delete({
       where: {
         id: req.params.id
       }
     })
-    return res.json({ message: "task deleted successfully" });
+    return res.json({ success: true, message: "task deleted successfully" });
   } catch (error) {
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
   }
 });
 
