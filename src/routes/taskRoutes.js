@@ -2,32 +2,19 @@ import express from 'express';
 import { prisma } from "../config/db.js"
 const router = express.Router();
 
-const Status = {
-  pending: "pending",
-  completed: "completed"
-}
+const Status = ["pending", "completed"];
 
-const Priority = {
-  low: "low",
-  medium: "medium",
-  high: "high"
-}
+const Priority = ["high", "medium", "low"];
 
-const Category = {
-  health: "health",
-  work: "work",
-  finance: "finance",
-  shopping: "shopping",
-  personal: "personal",
-  other: "other"
-}
 
-const SortBy = {
-  newestFirst: "newest",
-  oldestFirst: "oldest",
-  byDueDate: "dueDate",
-  byPriority: "priority"
-}
+const Category = [
+  "health",
+  "work",
+  "finance",
+  "shopping",
+  "personal",
+  "other"
+]
 
 router.get('/', async (req, res) => {
   try {
@@ -66,48 +53,51 @@ router.get('/', async (req, res) => {
 
 router.get('/tasks', async (req, res) => {
   const { search, status, priority, category, sortBy } = req.query;
-  console.log("Search Query:", req.query);
-  try {
-    const tasks = await prisma.task.findMany();
+  const prismaConditions = {};
 
-    let filteredTasks = tasks;
+  try {
     if (search) {
-      filteredTasks = filteredTasks.filter(task => task.title.toLowerCase().includes(search.toLowerCase())
-        || task.description.toLowerCase().includes(search.toLowerCase()));
+      prismaConditions.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
     }
 
     if (status) {
-      filteredTasks = filteredTasks.filter(task => task.status === Status[status]);
-    }
-    if (priority) {
-      filteredTasks = filteredTasks.filter(task => task.priority === Priority[priority]);
-    }
-    if (category) {
-      filteredTasks = filteredTasks.filter(task => task.category === Category[category]);
-    }
-    if (sortBy) {
-      switch (sortBy) {
-        case SortBy.newestFirst:
-          filteredTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-        case SortBy.oldestFirst:
-          filteredTasks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case SortBy.byDueDate:
-          filteredTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-          break;
-        case SortBy.byPriority:
-          filteredTasks.sort((a, b) => {
-            const priorityOrder = [Priority.high, Priority.medium, Priority.low];
-            return priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority);
-          });
-          break;
+      if (!Status.includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid status value' });
       }
+      prismaConditions.status = status;
     }
-    res.json({
+
+    if (priority) {
+      if (!Priority.includes(priority)) {
+        return res.status(400).json({ success: false, message: 'Invalid priority value' });
+      }
+      prismaConditions.priority = priority;
+    }
+
+    if (category) {
+      if (!Category.includes(category)) {
+        return res.status(400).json({ success: false, message: 'Invalid category value' });
+      }
+      prismaConditions.category = category;
+    }
+
+    let prismaSorting = { createdAt: 'desc' };
+
+    if (sortBy === 'oldest') prismaSorting = { createdAt: 'asc' };
+    if (sortBy === 'dueDate') prismaSorting = { dueDate: 'asc' };
+    if (sortBy === 'priority') prismaSorting = { priority: 'asc' };
+
+    const tasks = await prisma.task.findMany({
+      where: { prismaConditions },
+      orderBy: prismaSorting
+    });
+    return res.json({
       success: true,
       message: 'Tasks fetched successfully',
-      tasks: filteredTasks
+      tasks: tasks
     })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch tasks', error: error.message });
@@ -154,15 +144,15 @@ router.post('/tasks', async (req, res) => {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
-    if (status && !Object.values(Status).includes(status)) {
+    if (status && !Status.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
-    if (priority && !Object.values(Priority).includes(priority)) {
+    if (priority && !Priority.includes(priority)) {
       return res.status(400).json({ success: false, message: 'Invalid priority value' });
     }
 
-    if (category && !Object.values(Category).includes(category)) {
+    if (category && !Category.includes(category)) {
       return res.status(400).json({ success: false, message: 'Invalid category value' });
     }
 
@@ -176,13 +166,14 @@ router.post('/tasks', async (req, res) => {
         dueDate: dueDate ? new Date(dueDate) : undefined
       }
     });
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Task created successfully',
       task: task
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to create task', error: error.message });
+
+    return res.status(500).json({ success: false, message: 'Failed to create task', error: error.message });
   }
 
 });
@@ -192,6 +183,25 @@ router.put('/tasks/:id', async (req, res) => {
   const { id } = req.params;
   const { title, status, priority, category, description, dueDate } = req.body;
 
+  if (!id) {
+    return res.status(400).json({ success: false, message: 'Task ID is required' });
+  }
+
+  if (!title || !dueDate) {
+    return res.status(400).json({ success: false, message: 'All fields are required' });
+  }
+
+  if (status && !Status.includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid status value' });
+  }
+
+  if (priority && !Priority.includes(priority)) {
+    return res.status(400).json({ success: false, message: 'Invalid priority value' });
+  }
+
+  if (category && !Category.includes(category)) {
+    return res.status(400).json({ success: false, message: 'Invalid category value' });
+  }
 
   try {
     const updatedTask = await prisma.task.update({
@@ -213,7 +223,9 @@ router.put('/tasks/:id', async (req, res) => {
     });
 
   } catch (error) {
-
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
     return res.status(500).json({ success: false, message: 'Failed to update task', error: error.message });
   }
 });
@@ -225,21 +237,16 @@ router.delete('/tasks/:id', async (req, res) => {
 
 
   try {
-    const task = await prisma.task.findUnique({
-      where: {
-        id: id
-      }
-    });
-    if (!task) {
-      return res.status(404).json({ success: false, message: "task Not Found" });
-    }
     await prisma.task.delete({
       where: {
-        id: req.params.id
+        id
       }
     })
     return res.json({ success: true, message: "task deleted successfully" });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
     return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
   }
 });
