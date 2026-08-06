@@ -91,7 +91,7 @@ router.get('/tasks', async (req, res) => {
     if (sortBy === 'priority') prismaSorting = { priority: 'asc' };
 
     const tasks = await prisma.task.findMany({
-      where: { prismaConditions },
+      where: prismaConditions,
       orderBy: prismaSorting
     });
     return res.json({
