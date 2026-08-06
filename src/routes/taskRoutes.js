@@ -86,9 +86,14 @@ router.get('/tasks', async (req, res) => {
 
     let prismaSorting = { createdAt: 'desc' };
 
+    if (sortBy && !['newest', 'oldest', 'dueDate', 'priority'].includes(sortBy)) {
+      return res.status(400).json({ success: false, message: 'Invalid sortBy value' });
+    }
+
     if (sortBy === 'oldest') prismaSorting = { createdAt: 'asc' };
     if (sortBy === 'dueDate') prismaSorting = { dueDate: 'asc' };
     if (sortBy === 'priority') prismaSorting = { priority: 'asc' };
+    if (sortBy === 'newest') prismaSorting = { createdAt: 'desc' };
 
     const tasks = await prisma.task.findMany({
       where: prismaConditions,
