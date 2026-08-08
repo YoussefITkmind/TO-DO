@@ -192,9 +192,9 @@ router.put('/tasks/:id', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Task ID is required' });
   }
 
-  if (!title || !dueDate) {
-    return res.status(400).json({ success: false, message: 'All fields are required' });
-  }
+  // if (!title || !dueDate) {
+  //   return res.status(400).json({ success: false, message: 'All fields are required' });
+  // }
 
   if (status && !Status.includes(status)) {
     return res.status(400).json({ success: false, message: 'Invalid status value' });
