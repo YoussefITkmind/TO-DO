@@ -3,12 +3,32 @@ import { config } from "dotenv";
 import { connectDB, disconnectDB } from "./config/db.js";
 // Import Routes
 import taskRoutes from "./routes/taskRoutes.js";
+import cors from "cors";
+
 
 config();
 connectDB();
 
 const app = express();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://to-do-black-kappa.vercel.app'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 // Body parsing middlwares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
