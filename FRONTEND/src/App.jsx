@@ -541,7 +541,7 @@ const handleDeleteTask = async (id) => {
               setCategoryFilter(e.target.value)
             }
           >
-            <option value="all">
+            <option value="All">
               All Categories
             </option>
 
@@ -749,17 +749,31 @@ const handleDeleteTask = async (id) => {
                   setTaskCategory(e.target.value)
                 }
               >
-                <option value="Work">
+                <option value="work">
                   Work
                 </option>
 
-                <option value="Personal">
+                <option value="personal">
                   Personal
                 </option>
 
-                <option value="Shopping">
+                <option value="shopping">
                   Shopping
                 </option>
+
+                
+                <option value="finance">
+                  Finance
+                </option>
+                
+                <option value="health">
+                  Health
+                </option>
+
+                <option value="other">
+                  Other
+                </option>
+
               </select>
 
 

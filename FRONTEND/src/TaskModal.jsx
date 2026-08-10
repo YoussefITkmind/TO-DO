@@ -96,12 +96,18 @@ function TaskModal({ task, onClose, onUpdate, onDelete }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Category</label>
-                <input 
-                  type="text" 
+                <select 
                   value={editedCategory} 
                   onChange={(e) => setEditedCategory(e.target.value)}
-                  style={{ padding: '10px', fontSize: '14px', color: '#1f2937', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', width: '100%' }}
-                />
+                  style={{ padding: '10px', fontSize: '14px', color: '#1f2937', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', width: '100%', textTransform: 'capitalize' }}
+                >
+                  <option value="work">Work</option>
+                  <option value="personal">Personal</option>
+                  <option value="shopping">Shopping</option>
+                  <option value="finance">Finance</option>
+                  <option value="health">Health</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Priority</label>
