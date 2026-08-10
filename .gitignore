@@ -7,3 +7,4 @@ node_modules
 .claude\skills
 .claude
 .windsurf
+/FRONTEND/node_modules
