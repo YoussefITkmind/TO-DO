@@ -1,9 +1,30 @@
 {
   "version": 2,
   "builds": [
-    { "src": "src/server.js", "use": "@vercel/node" }
+    {
+      "src": "FRONTEND/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "src/server.js" }
+    {
+      "src": "/tasks(.*)",
+      "dest": "/src/server.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/FRONTEND/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/FRONTEND/index.html"
+    }
   ]
 }
