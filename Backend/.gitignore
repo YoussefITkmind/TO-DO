@@ -1,0 +1,10 @@
+node_modules
+# Keep environment variables out of version control
+.env
+.agents
+.agents\skills
+/src/generated/prisma
+.claude\skills
+.claude
+.windsurf
+/FRONTEND/node_modules
